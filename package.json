@@ -1,0 +1,26 @@
+{
+  "name": "estl-tap-2021-be",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lexzt/estl-tap-2021-be.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Lexzt/estl-tap-2021-be/issues"
+  },
+  "homepage": "https://github.com/Lexzt/estl-tap-2021-be#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "fast-csv": "^4.3.2",
+    "multer": "^1.4.2",
+    "mysql2": "^2.2.5",
+    "sequelize": "^6.3.5"
+  }
+}
