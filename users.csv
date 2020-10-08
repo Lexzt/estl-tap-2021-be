@@ -8,6 +8,7 @@ e0006,gwesley,Ginny Weasley,4000.004
 e0007,hgranger,Hermione Granger,0
 e0008,adumbledore,Albus Dumbledore,34.23
 e0009,dmalfoy,Draco Malfoy,34234.5
-e0010,basilisk,Basilisk,-23.43
-e0011,basilisk#,B#asilisk,-23.43
-e#0012,basilisk,Basilisk,-#23.43
+#e0010,basilisk,Basilisk,-23.43
+#e0011,basilisk#,B#asilisk,-23.43
+#e#0012,basilisk,Basilisk,-#23.43
+#e0013,basilisk,Basilisk,-#23.43
