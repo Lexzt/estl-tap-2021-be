@@ -1,5 +1,6 @@
 const http = require("http");
 const fs = require("fs");
+const he = require("he");
 
 const express = require("express");
 const multer = require("multer");
@@ -246,9 +247,44 @@ app.post("/", upload.single("file"), (req, res) => {
     });
 });
 
-app.get("/users", async (req, res) => {
-  console.log(req.query);
+app.get("/users/count", async (req, res) => {
+  const { minSalary, maxSalary } = req.query;
+  if (!minSalary || !maxSalary) {
+    res.status(400);
+    res.send("Missing Request Params");
+    return;
+  }
 
+  const regexNumeric = RegExp(/^\-?[0-9]+(e[0-9]+)?(\.[0-9]+)?$/);
+
+  if (
+    !regexNumeric.test(minSalary) ||
+    !regexNumeric.test(maxSalary) ||
+    parseFloat(minSalary) < 0 ||
+    parseFloat(minSalary) > parseFloat(maxSalary)
+  ) {
+    res.status(400);
+    res.send("Invalid Request Params 3");
+    return;
+  }
+
+  const dbResults = await users.count({
+    where: {
+      salary: {
+        [Op.between]: [
+          parseFloat(req.query.minSalary),
+          parseFloat(req.query.maxSalary),
+        ],
+      },
+    },
+  });
+
+  res.send({
+    results: dbResults,
+  });
+});
+
+app.get("/users", async (req, res) => {
   const { minSalary, maxSalary, offset, limit, sort } = req.query;
   if (!minSalary || !maxSalary || !offset || !limit || !sort) {
     res.status(400);
@@ -261,12 +297,13 @@ app.get("/users", async (req, res) => {
   // Due to how + signs get ignored for some reason, I am assuming something
   // If no sign is given, asc is default.
   // If - sign is given, desc is adopted.
-  let qtn = "";
-  let sortBy; // true - asc, false = desc;
-  if (sort[0] === " ") {
+  const parsedFilter = he.decode(sort);
+  console.log(parsedFilter);
+
+  if (parsedFilter[0] === "+") {
     qtn = sort.substr(1, sort.length);
     sortBy = "ASC";
-  } else if (sort[0] === "-") {
+  } else if (parsedFilter[0] === "-") {
     qtn = sort.substr(1, sort.length);
     sortBy = "DESC";
   } else {
@@ -274,6 +311,19 @@ app.get("/users", async (req, res) => {
     res.send("Invalid Request Params 1");
     return;
   }
+  // let qtn = "";
+  // let sortBy; // true - asc, false = desc;
+  // if (sort[0] === " ") {
+  //   qtn = sort.substr(1, sort.length);
+  //   sortBy = "ASC";
+  // } else if (sort[0] === "-") {
+  //   qtn = sort.substr(1, sort.length);
+  //   sortBy = "DESC";
+  // } else {
+  //   res.status(400);
+  //   res.send("Invalid Request Params 1");
+  //   return;
+  // }
 
   if (
     !(qtn === "name" || qtn === "id" || qtn === "salary" || qtn === "login")
@@ -290,6 +340,7 @@ app.get("/users", async (req, res) => {
     !regexNumeric.test(limit) ||
     parseFloat(offset) < 0 ||
     parseFloat(limit) > 30 ||
+    parseFloat(minSalary) < 0 ||
     parseFloat(minSalary) > parseFloat(maxSalary)
   ) {
     res.status(400);
