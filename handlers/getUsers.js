@@ -7,9 +7,7 @@ const regexNumeric = RegExp(/^\-?[0-9]+(e[0-9]+)?(\.[0-9]+)?$/);
 async function getUserCount(req, res) {
   const { minSalary, maxSalary } = req.query;
   if (!minSalary || !maxSalary) {
-    res.status(400);
-    res.send("Missing Request Params");
-    return;
+    return res.status(400).json({ message: "Missing Request Params" });
   }
 
   if (
@@ -18,9 +16,7 @@ async function getUserCount(req, res) {
     parseFloat(minSalary) < 0 ||
     parseFloat(minSalary) > parseFloat(maxSalary)
   ) {
-    res.status(400);
-    res.send("Invalid Request Params 4");
-    return;
+    return res.status(400).json({ message: "Invalid Request Params 4" });
   }
 
   const dbResults = await users.count({
@@ -41,10 +37,22 @@ async function getUserCount(req, res) {
 
 async function getUsers(req, res) {
   const { minSalary, maxSalary, offset, limit, sort } = req.query;
-  if (!minSalary || !maxSalary || !offset || !limit || !sort) {
-    res.status(400);
-    res.send("Missing Request Params");
-    return;
+  if (
+    (typeof offset === "number" && offset < 0) ||
+    (typeof offset === "string" && !offset)
+  ) {
+    return res.status(400).json({ message: "Missing Request Params" });
+  }
+
+  if (
+    (typeof limit === "number" && limit < 0) ||
+    (typeof limit === "string" && !limit)
+  ) {
+    return res.status(400).json({ message: "Missing Request Params" });
+  }
+
+  if (!minSalary || !maxSalary || !sort) {
+    return res.status(400).json({ message: "Missing Request Params" });
   }
 
   // Decodes the +/- sign as a HTML encoded input
@@ -54,18 +62,14 @@ async function getUsers(req, res) {
   } else if (parsedFilter[0] === "-") {
     sortBy = "DESC";
   } else {
-    res.status(400);
-    res.send("Invalid Request Params 1");
-    return;
+    return res.status(400).json("Invalid Request Params 1");
   }
   qtn = sort.substr(1, sort.length);
 
   if (
     !(qtn === "name" || qtn === "id" || qtn === "salary" || qtn === "login")
   ) {
-    res.status(400);
-    res.send("Invalid Request Params 2");
-    return;
+    return res.status(400).json({ message: "Invalid Request Params 2" });
   }
 
   if (
@@ -78,11 +82,10 @@ async function getUsers(req, res) {
     parseFloat(minSalary) < 0 ||
     parseFloat(minSalary) > parseFloat(maxSalary)
   ) {
-    res.status(400);
-    res.send("Invalid Request Params 3");
-    return;
+    return res.status(400).json({ message: "Invalid Request Params 3" });
   }
 
+  console.log(users);
   const dbResults = await users.findAll({
     where: {
       salary: {
@@ -106,7 +109,7 @@ async function getUsers(req, res) {
     })),
   };
 
-  res.send(results);
+  return res.status(200).json(results);
 }
 
 module.exports = {
