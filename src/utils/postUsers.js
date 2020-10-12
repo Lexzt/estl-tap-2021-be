@@ -1,10 +1,8 @@
-const multer = require("multer");
 const csv = require("fast-csv");
 const fs = require("fs");
-const upload = multer({ dest: "tmp/csv/" });
 
-const users = require("../models/users").users;
-const database = require("../config/database").database;
+const users = require("../models/users");
+const database = require("../../config/database").database;
 
 async function postUser(req, res) {
   const fileRows = [];
@@ -264,6 +262,4 @@ async function postUser(req, res) {
     });
 }
 
-module.exports = {
-  postUser,
-};
+module.exports = postUser;
