@@ -30,40 +30,9 @@ describe("src/utils/postUsers", () => {
     sequelize: { mockDatabaseModels },
   });
 
-  //   context("Invalid Params (Offset)", () => {
-  //     const req = mockRequest({});
-  //     const res = mockResponse();
-
-  //     req.query.minSalary = 1000;
-  //     req.query.maxSalary = 2000;
-
-  //     it("Return 400, Missing offset", async () => {
-  //       delete req.query.offset;
-
-  //       result = await postUsers(req, res);
-  //       expect(result.status.calledWith(400)).to.be.true;
-  //       expect(
-  //         result.json.calledWith({
-  //           message: "Invalid Request Params 3",
-  //         })
-  //       ).to.be.true;
-  //     });
-  //   });
   let result;
 
   context("Empty CSV Upload", () => {
-    // before(async () => {
-    //   const req = mockRequest({});
-    //   const res = mockResponse();
-
-    //   //   users.findAll.resolves([]);
-    //   //   transaction.resolves([]);
-    //   result = await postUsers(req, res);
-    //   console.log(result);
-    // });
-
-    // after(resetHistory);
-
     it("Return 500, Empty File", async () => {
       const req = mockRequest({});
       const res = mockResponse();
@@ -131,6 +100,23 @@ describe("src/utils/postUsers", () => {
       const res = mockResponse();
 
       req.file.path = "./invalid-salary.csv";
+
+      result = await postUsers(req, res);
+      expect(result.status.calledWith(500)).to.be.true;
+      expect(
+        result.json.calledWith({
+          message: "File contains invalid CSV Data",
+        })
+      ).to.be.true;
+    });
+  });
+
+  context("Invalid Entries CSV Upload", () => {
+    it("Return 500, Invalid Login", async () => {
+      const req = mockRequest({});
+      const res = mockResponse();
+
+      req.file.path = "./invalid-login.csv";
 
       result = await postUsers(req, res);
       expect(result.status.calledWith(500)).to.be.true;

@@ -1,4 +1,3 @@
-const csv = require("fast-csv");
 const fs = require("fs");
 
 const users = require("../models/users");
@@ -43,16 +42,6 @@ async function postUser(req, res) {
   // Check alphanumeric for id
   const regexAlphaNumeric = RegExp(/^[a-z0-9]+$/i);
   const regexNumeric = RegExp(/^\-?[0-9]+(e[0-9]+)?(\.[0-9]+)?$/);
-  // nonCommentedRows.forEach((row) => {
-  //   console.log(
-  //     row,
-  //     regexAlphaNumeric.test(row[0].trim()),
-  //     regexAlphaNumeric.test(row[1].trim()),
-  //     regexAlphaNumeric.test(row[2].trim()),
-  //     regexNumeric.test(row[3].trim()),
-  //     parseFloat(row[3].trim()) >= 0
-  //   );
-  // });
 
   const hasInvalidId = nonCommentedRows.filter(
     (rowArr) =>
@@ -185,7 +174,6 @@ async function postUser(req, res) {
 
     Promise.all(dbAppendPromises)
       .then(async (result) => {
-        console.log("commiting");
         isUploading = false;
         await t.commit();
         return res.status(200).json({ message: "Data Uploaded" });
@@ -200,21 +188,6 @@ async function postUser(req, res) {
     await t.rollback();
     return res.status(500).json({ message: error });
   }
-
-  // await csv
-  //   .parseFile(req.file.path)
-  //   .on("data", function (data) {
-  //     fileRows.push(data);
-  //   })
-  //   .on("end", () => {
-  //     console.log(fileRows);
-  //   });
-
-  // console.log("After", fileRows);
-  // .on("end", async () => {
-  //   console.log("here?");
-  //
-  // });
 }
 
 module.exports = postUser;
