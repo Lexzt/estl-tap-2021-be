@@ -11,8 +11,9 @@ async function postUser(req, res) {
   const fileRows = [];
   // open uploaded file
   if (isUploading) {
-    res.send("Currently Uploading Data, please wait");
-    return;
+    return res
+      .status(500)
+      .json({ message: "File being uploaded, please wait" });
   }
 
   const fileContents = fs.readFileSync(req.file.path);
