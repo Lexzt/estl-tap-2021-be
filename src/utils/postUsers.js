@@ -4,10 +4,18 @@ const fs = require("fs");
 const users = require("../models/users");
 const database = require("../../config/database").database;
 
+const { makeid } = require("./fakeUser");
+
+let isUploading = false;
+
 async function postUser(req, res) {
   const fileRows = [];
 
   // open uploaded file
+  if (isUploading) {
+    res.send("Currently Uploading Data, please wait");
+    return;
+  }
   csv
     .parseFile(req.file.path)
     .on("data", function (data) {
@@ -15,250 +23,182 @@ async function postUser(req, res) {
     })
     .on("end", async () => {
       if (fileRows.length === 0 || fileRows.length === 1) {
-        res.status(500);
-        res.send("Error: Empty File");
-        return;
+        return res.status(500).json({ message: "Empty File " });
       }
 
-      console.log(fileRows);
       fs.unlinkSync(req.file.path);
-
       fileRows.shift(); // removes headers
 
       /*
-          1. Remove # at start
-          2. Check alphanumeric valid for id, login
-          3. Check positive number for salary
-        */
+        1. Remove # at start
+        2. Check alphanumeric valid for id, login
+        3. Check positive number for salary
+      */
 
       // Removes # at start
       let nonCommentedRows = fileRows.filter((rowArr) => rowArr[0][0] !== "#");
-      console.log(nonCommentedRows);
+      console.log("hello", nonCommentedRows);
 
       // Check alphanumeric for id
       const regexAlphaNumeric = RegExp(/^[a-z0-9]+$/i);
       const regexNumeric = RegExp(/^\-?[0-9]+(e[0-9]+)?(\.[0-9]+)?$/);
+      // nonCommentedRows.forEach((row) => {
+      //   console.log(
+      //     regexAlphaNumeric.test(row[0].trim()),
+      //     regexAlphaNumeric.test(row[1].trim()),
+      //     regexNumeric.test(row[3].trim()),
+      //     parseFloat(row[3].trim()) >= 0
+      //   );
+      // });
+
       const hasInvalidId = nonCommentedRows.filter(
         (rowArr) =>
           !(
-            regexAlphaNumeric.test(rowArr[0]) &&
-            regexAlphaNumeric.test(rowArr[1]) &&
-            regexNumeric.test(rowArr[3]) &&
-            parseFloat(rowArr[3]) >= 0
+            regexAlphaNumeric.test(rowArr[0].trim()) &&
+            regexAlphaNumeric.test(rowArr[1].trim()) &&
+            regexNumeric.test(rowArr[3].trim()) &&
+            parseFloat(rowArr[3].trim()) >= 0
           )
       );
 
+      console.log(hasInvalidId);
       if (hasInvalidId.length > 0) {
-        res.status(500);
-        res.send("Invalid CSV Data");
-        return;
+        return res
+          .status(500)
+          .json({ message: "File contains invalid CSV Data" });
       }
 
-      let temp = nonCommentedRows[5];
+      isUploading = true;
       const t = await database.transaction();
-      try {
-        const result = await users.findAll({
-          where: {
-            id: temp[0],
-          },
-          lock: true,
-        });
 
-        if (result.length === 0) {
-          const user = await users.create(
-            {
-              id: temp[0],
-              login: temp[1],
-              name: temp[2],
-              salary: parseFloat(temp[3]),
-            },
-            { transaction: t }
-          );
-          console.log("case 1");
-        } else {
-          const possibleConflict = await users.findAll({
+      try {
+        /*
+        3 Cases
+
+        1. ID && Login does not exist
+            Create and append into DB.
+
+        2. ID does not exist && Login exist
+            Update by ID salary, name
+
+        3. ID exist and Login is different
+            Swap
+
+            e.g.
+
+            DB holds
+            1, J, j, 1
+            2, M, m, 2
+
+            Added:
+            1, M, a, 3
+
+            Result:
+            2, J, j, 1
+            1, M, a, 3
+        */
+
+        const dbAppendPromises = nonCommentedRows.map(async (row) => {
+          const idExist = await users.findAll({
             where: {
-              login: temp[1],
+              id: row[0],
             },
-            lock: true,
           });
-          if (possibleConflict.length === 0) {
-            const user = await users.upsert(
+
+          const loginExist = await users.findAll({
+            where: {
+              login: row[1],
+            },
+          });
+
+          if (idExist.length === 0 && loginExist.length === 0) {
+            return users.create(
               {
-                id: temp[0],
-                login: temp[1],
-                name: temp[2],
-                salary: parseFloat(temp[3]),
+                id: row[0],
+                login: row[1],
+                name: row[2],
+                salary: parseFloat(row[3]),
               },
               { transaction: t }
             );
-            console.log("case 2");
           } else {
-            /* Login exist alr, therefore, conflict,
-                1. Change possibleConflict to temp id
-                2. Change 
-                ???
-              */
-            console.log("case 3");
+            if (idExist.length === 0 && loginExist.length === 1) {
+              return users.update(
+                {
+                  id: row[0],
+                  login: row[1],
+                  name: row[2],
+                  salary: parseFloat(row[3]),
+                },
+                {
+                  where: {
+                    login: row[1],
+                  },
+                  transaction: t,
+                }
+              );
+            } else {
+              const tempId = makeid(15);
+              await users.update(
+                {
+                  id: tempId,
+                },
+                {
+                  where: {
+                    id: row[0],
+                  },
+                  transaction: t,
+                }
+              );
+
+              const prevId = loginExist[0].id;
+              await users.update(
+                {
+                  id: row[0],
+                  login: row[1],
+                  name: row[2],
+                  salary: parseFloat(row[3]),
+                },
+                {
+                  where: {
+                    login: row[1],
+                  },
+                  transaction: t,
+                }
+              );
+
+              return users.update(
+                {
+                  id: prevId,
+                },
+                {
+                  where: {
+                    id: tempId,
+                  },
+                  transaction: t,
+                }
+              );
+            }
           }
-        }
+        });
 
-        setTimeout(async () => {
-          console.log("hello commited!");
-          await t.commit();
-          res.send("Updated!");
-        }, 15000);
-
-        // const result = await dbInstance.transaction(async (t) => {
-        //   const result = await users.findAll({
-        //     where: {
-        //       id: temp[0],
-        //     },
-        //   });
-
-        //   if (result.length === 0) {
-        //     const user = await users.create(
-        //       {
-        //         id: temp[0],
-        //         login: temp[1],
-        //         name: temp[2],
-        //         salary: parseFloat(temp[3]),
-        //       },
-        //       { transaction: t }
-        //     );
-        //   } else {
-        //     const possibleConflict = await users.findAll({
-        //       where: {
-        //         login: temp[1],
-        //       },
-        //     });
-        //     if (possibleConflict.length === 0) {
-        //       const user = await users.upsert(
-        //         {
-        //           id: temp[0],
-        //           login: temp[1],
-        //           name: temp[2],
-        //           salary: parseFloat(temp[3]),
-        //         },
-        //         { transaction: t }
-        //       );
-        //     } else {
-        //       /* Login exist alr, therefore, conflict,
-        //         1. Change possibleConflict to temp id
-        //         2. Change
-        //         ???
-        //       */
-        //     }
-        //   }
-
-        //   setTimeout(async () => {
-        //     console.log("hello commited!");
-        //     await t.commit();
-        //   }, 15000);
-        // });
+        Promise.all(dbAppendPromises)
+          .then(async (result) => {
+            console.log("commiting");
+            isUploading = false;
+            await t.commit();
+            return res.status(200).json({ message: "Data Uploaded" });
+          })
+          .catch(async (error) => {
+            console.log("error ", error);
+            await t.rollback();
+            throw error;
+          });
       } catch (error) {
+        console.log(error);
         await t.rollback();
-        res.status(500);
-        res.send(error);
+        return res.status(500).json({ message: error });
       }
-
-      // try {
-      //   const result = await dbInstance.transaction(async (t) => {
-      //     /*
-      //       First, we need to check if the id exist
-      //         If it does not, we can just insert
-      //         If it does, then complex case.
-      //           If there is no common login, update
-      //           If there is a common login, swap
-      //     */
-      //     const result = await users.findAll({
-      //       where: {
-      //         id: temp[0],
-      //       },
-      //     });
-      //     if (result.length === 0) {
-      //       // If it does not exist, we can just insert
-      //       console.log("case 1");
-      //       const user = await users.create(
-      //         {
-      //           id: temp[0],
-      //           login: temp[1],
-      //           name: temp[2],
-      //           salary: parseFloat(temp[3]),
-      //         },
-      //         { transaction: t }
-      //       );
-      //     } else {
-      //       // It exist, complex case
-      //       const complexResult = await users.findAll({
-      //         where: {
-      //           login: temp[1],
-      //         },
-      //       });
-      //       console.log(complexResult);
-
-      //       if (complexResult.length === 0 || complexResult[0].id === temp.id) {
-      //         // If there is no common login, update
-      //         console.log("case 2");
-      //         const user = await users.upsert(
-      //           {
-      //             id: temp[0],
-      //             login: temp[1],
-      //             name: temp[2],
-      //             salary: parseFloat(temp[3]),
-      //           },
-      //           { transaction: t }
-      //         );
-      //       } else {
-      //         // I have found a case where there exist a login that belongs to a different id;
-      //         // Handle swaps
-      //         console.log("case 3");
-
-      //         const tempId = 99;
-      //         const oldData = complexResult[0];
-      //         console.log(oldData);
-      //         const user = await users.update(
-      //           {
-      //             id: tempId,
-      //           },
-      //           {
-      //             where: {
-      //               id: oldData.id,
-      //             },
-      //             transaction: t,
-      //           }
-      //         );
-
-      //         const newUser = await users.create(
-      //           {
-      //             id: temp[0],
-      //             login: temp[1],
-      //             name: temp[2],
-      //             salary: parseFloat(temp[3]),
-      //           },
-      //           { transaction: t }
-      //         );
-
-      //         const updateTemp = await users.update(
-      //           {
-      //             id: oldData[0],
-      //           },
-      //           {
-      //             where: {
-      //               id: tempId,
-      //             },
-      //             transaction: t,
-      //           }
-      //         );
-      //       }
-      //     }
-      //     await t.commit();
-      //   });
-      // } catch (error) {
-      //   console.log(error);
-      //   res.status(500);
-      //   res.send(error);
-      // }
     });
 }
 
