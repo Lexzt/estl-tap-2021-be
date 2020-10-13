@@ -6,8 +6,9 @@ const regexAlphaNumeric = RegExp(/^[a-z0-9]+$/i);
 const regexNumeric = RegExp(/^\-?[0-9]+(e[0-9]+)?(\.[0-9]+)?$/);
 
 async function postUser(req, res) {
-  console.log(req.params);
-  console.log(req.body);
+  if (req.params.id !== req.body.id) {
+    return res.status(500).json({ message: "Different ID" });
+  }
 
   // Check if ID is valid
   const { id, login, name, salary } = req.body;
@@ -101,7 +102,6 @@ async function patchUser(req, res) {
 }
 
 async function getUser(req, res) {
-  console.log(req.params);
   const { id } = req.params;
   if (!id || !regexAlphaNumeric.test(id)) {
     return res.status(400).json({ message: "Missing Id" });
