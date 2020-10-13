@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const { match, stub, resetHistory, mock } = require("sinon");
+const { stub, resetHistory } = require("sinon");
 const proxyquire = require("proxyquire");
 
 const { makeMockModels } = require("sequelize-test-helpers");

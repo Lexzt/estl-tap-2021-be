@@ -9,7 +9,7 @@ const usersRouter = require("./routes/users");
 
 const app = express();
 
-const database = require("./config/database").database;
+const database = require("./config/database");
 const init = async () => {
   try {
     await database.authenticate();
