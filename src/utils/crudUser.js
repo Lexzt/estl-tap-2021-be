@@ -8,7 +8,7 @@ const regexNumeric = RegExp(/^\-?[0-9]+(e[0-9]+)?(\.[0-9]+)?$/);
 async function postUser(req, res) {
   // Check if ID is valid
   const { id } = req.params;
-  const { id, login, name, salary } = req.body;
+  const { login, name, salary } = req.body;
 
   let salaryCheck;
   if (typeof salary === "string") {
@@ -28,29 +28,30 @@ async function postUser(req, res) {
   ) {
     return res.status(500).json({ message: "Invalid Body" });
   }
-
-  // Check if Name or ID exist in DB
-  const dbResults = await users.findAll({
-    where: {
-      [Op.or]: [
-        {
-          id: {
-            [Op.eq]: id,
-          },
-          login: {
-            [Op.eq]: login,
-          },
-        },
-      ],
-    },
-  });
-
-  if (dbResults.length > 0) {
-    return res.status(400).json({ message: "Overlapping ID" });
-  }
-
   const t = await database.transaction();
   try {
+    // Check if Name or ID exist in DB
+    const dbResults = await users.findAll({
+      where: {
+        [Op.or]: [
+          {
+            id: {
+              [Op.eq]: id,
+            },
+            login: {
+              [Op.eq]: login,
+            },
+          },
+        ],
+      },
+    });
+
+    if (dbResults.length > 0) {
+      return res
+        .status(400)
+        .json({ message: "Overlapping/Non-unique ID/Name" });
+    }
+
     const createResult = await users.create(
       {
         id: id,
@@ -104,7 +105,7 @@ async function patchUser(req, res) {
 
   try {
     // Check if ID exist in DB
-    const dbResults = await users.findAll(
+    const idResults = await users.findAll(
       {
         where: {
           id: {
@@ -114,12 +115,12 @@ async function patchUser(req, res) {
       },
       { transaction: t }
     );
-    if (dbResults.length > 0) {
-      return res.status(400).json({ message: "Invalid ID, Ignoring" });
+    if (idResults.length === 0) {
+      return res.status(400).json({ message: "Missing/Invalid ID" });
     }
 
-    // Check if Name exist in DB
-    const dbResults = await users.findAll(
+    // Check if login exist in DB
+    const loginResults = await users.findAll(
       {
         where: {
           login: {
@@ -130,8 +131,8 @@ async function patchUser(req, res) {
       { transaction: t }
     );
 
-    if (dbResults.length > 0) {
-      return res.status(400).json({ message: "Overlapping Login, Ignoring" });
+    if (loginResults.length > 0) {
+      return res.status(400).json({ message: "Overlapping/Non-unique Login" });
     }
 
     const updateResult = await users.update(
@@ -139,7 +140,7 @@ async function patchUser(req, res) {
         id: id,
         login: login,
         name: name,
-        salary: salary,
+        salary: parseFloat(salary),
       },
       {
         where: {
@@ -148,6 +149,7 @@ async function patchUser(req, res) {
         transaction: t,
       }
     );
+
     const results = {
       id: updateResult.id,
       name: updateResult.name,
