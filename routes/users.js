@@ -13,6 +13,8 @@ router.get("/", getUser);
 router.get("/count", getUserCount);
 router.post("/upload", upload.single("file"), postUsers);
 
+// router.get("/fakedata", crudUser.fakedata);
+
 router.post("/:id", crudUser.postUser);
 router.patch("/:id", crudUser.patchUser);
 router.get("/:id", crudUser.getUser);

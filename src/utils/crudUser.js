@@ -26,7 +26,7 @@ async function postUser(req, res) {
       salaryCheck
     )
   ) {
-    return res.status(500).json({ message: "Invalid Body" });
+    return res.status(400).json({ message: "Invalid Body" });
   }
   const t = await database.transaction();
   try {
@@ -73,7 +73,7 @@ async function postUser(req, res) {
   } catch (error) {
     console.log(error);
     await t.rollback();
-    return res.status(500).json({ message: error });
+    return res.status(400).json({ message: error });
   }
 }
 
@@ -98,7 +98,7 @@ async function patchUser(req, res) {
       salaryCheck
     )
   ) {
-    return res.status(500).json({ message: "Invalid Body" });
+    return res.status(400).json({ message: "Invalid Body" });
   }
 
   const t = await database.transaction();
@@ -131,7 +131,7 @@ async function patchUser(req, res) {
       { transaction: t }
     );
 
-    if (loginResults.length > 0) {
+    if (loginResults[0].id !== idResults[0].id) {
       return res.status(400).json({ message: "Overlapping/Non-unique Login" });
     }
 
@@ -161,7 +161,7 @@ async function patchUser(req, res) {
   } catch (error) {
     console.log(error);
     await t.rollback();
-    return res.status(500).json({ message: error });
+    return res.status(400).json({ message: error });
   }
 }
 
@@ -205,9 +205,52 @@ async function deleteUser(req, res) {
   await dbResults.destroy();
   return res.status(200).json({ message: `${id} - ${nameForPrint} Deleted` });
 }
+
+// async function fakedata(req, res) {
+//   let precision = 100; // 2 decimals
+//   function makeid(length) {
+//     var result = "";
+//     var characters =
+//       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+//     var charactersLength = characters.length;
+//     for (var i = 0; i < length; i++) {
+//       result += characters.charAt(Math.floor(Math.random() * charactersLength));
+//     }
+//     return result;
+//   }
+
+//   const mockData = () => {
+//     let randomnum =
+//       Math.floor(
+//         Math.random() * (10000 * precision - 1000 * precision) + 1 * precision
+//       ) /
+//       (1 * precision);
+//     return {
+//       id: makeid(15),
+//       login: makeid(15),
+//       name: makeid(5),
+//       salary: randomnum,
+//     };
+//   };
+
+//   const t = await database.transaction();
+//   try {
+//     const promiseArr = [];
+//     for (let i = 0; i < 100; i++) {
+//       promiseArr.push(users.create(mockData(), { transaction: t }));
+//     }
+//     await Promise.all(promiseArr);
+//     await t.commit();
+//   } catch (error) {
+//     console.log(error);
+//     await t.rollback();
+//   }
+// }
+
 module.exports = {
   postUser,
   patchUser,
   getUser,
   deleteUser,
+  //   fakedata,
 };
