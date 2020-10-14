@@ -6,7 +6,7 @@
 - npm 6.14.x
 - MySQL 5.7
 
-Populate the `config/database.js` file with your MySQL database first.
+Populate the `.env` file with your MySQL database first.
 
 ## Installation
 
@@ -20,7 +20,7 @@ Runs the express server
 
 ### `npm test`
 
-Launches the mocha test runner<br />
+Launches the mocha test runner
 
 ## Database
 
@@ -75,11 +75,3 @@ I would have liked to implement more test cases for `crudUser.js`, but due to ti
 ### .csv sample files
 
 I have included some sample files to test via the upload endpoint and check the rejection accordingly.
-
-### Error return messages
-
-Currently, I am returning an error but not able to retrieve the error message on the front end service. This is due to a lack of knowledge on my part of the express framework.
-
-### .env file
-
-I would update the database

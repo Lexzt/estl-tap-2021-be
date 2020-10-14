@@ -1,7 +1,7 @@
 const { Sequelize } = require("sequelize");
 
 const sequelize = new Sequelize(
-  "mysql://root:Webcast.ly695@sys.cwwkcgormh6v.ap-southeast-1.rds.amazonaws.com:3306/estl"
+  `mysql://${process.env.DB_USER}:${process.env.DB_PASS}@${process.env.DB_HOST}/estl`
 );
 
 module.exports = sequelize;
